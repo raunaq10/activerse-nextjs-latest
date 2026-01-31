@@ -70,6 +70,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .navbar .container {
+      flex-wrap: nowrap;
+    }
   }
 
   .logo-image {
@@ -149,6 +156,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: transform 0.3s, box-shadow 0.3s;
+    white-space: nowrap;
   }
 
   .cta-button:hover {
@@ -159,7 +167,10 @@
 
   @media (max-width: 768px) {
     .cta-button {
-      display: none;
+      display: block;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      margin-right: 0.5rem;
     }
   }
 
