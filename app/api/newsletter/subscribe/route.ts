@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Subscriber from '@/models/Subscriber';
-import nodemailer from 'nodemailer';
+import { sendNewsletterWelcomeEmail } from '@/lib/emailNotifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,40 +40,10 @@ export async function POST(request: Request) {
         existingSubscriber.subscribed_at = new Date();
         await existingSubscriber.save();
 
-        const emailUser = process.env.EMAIL_USER;
-        const emailPassword = process.env.EMAIL_PASSWORD;
-
-        if (emailUser && emailPassword) {
-          try {
-            const transporter = nodemailer.createTransport({
-              service: 'gmail',
-              auth: {
-                user: emailUser,
-                pass: emailPassword,
-              },
-            });
-
-            await transporter.sendMail({
-              from: emailUser,
-              to: emailLower,
-              subject: 'Welcome back to Activerse Newsletter!',
-              html: `
-                <h2>Welcome back to Activerse!</h2>
-                <p>Thank you for resubscribing to our newsletter. You'll receive updates about:</p>
-                <ul>
-                  <li>New games and experiences</li>
-                  <li>Special offers and promotions</li>
-                  <li>Events and tournaments</li>
-                  <li>Latest news and updates</li>
-                </ul>
-                <p>We're excited to have you back!</p>
-                <p>Best regards,<br>The Activerse Team</p>
-              `,
-            });
-          } catch (emailError) {
-            console.error('Error sending welcome email:', emailError);
-          }
-        }
+        // Send welcome email with contact and game details
+        sendNewsletterWelcomeEmail(emailLower).catch((err) => {
+          console.error('Failed to send newsletter welcome email:', err);
+        });
 
         return NextResponse.json({
           message: 'Successfully resubscribed to our newsletter!',
@@ -87,40 +57,10 @@ export async function POST(request: Request) {
       active: true,
     });
 
-    const emailUser = process.env.EMAIL_USER;
-    const emailPassword = process.env.EMAIL_PASSWORD;
-
-    if (emailUser && emailPassword) {
-      try {
-        const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: emailUser,
-            pass: emailPassword,
-          },
-        });
-
-        await transporter.sendMail({
-          from: emailUser,
-          to: emailLower,
-          subject: 'Welcome to Activerse Newsletter!',
-          html: `
-            <h2>Welcome to Activerse!</h2>
-            <p>Thank you for subscribing to our newsletter. You'll receive updates about:</p>
-            <ul>
-              <li>New games and experiences</li>
-              <li>Special offers and promotions</li>
-              <li>Events and tournaments</li>
-              <li>Latest news and updates</li>
-            </ul>
-            <p>We're excited to have you with us!</p>
-            <p>Best regards,<br>The Activerse Team</p>
-          `,
-        });
-      } catch (emailError) {
-        console.error('Error sending welcome email:', emailError);
-      }
-    }
+    // Send welcome email with contact and game details
+    sendNewsletterWelcomeEmail(emailLower).catch((err) => {
+      console.error('Failed to send newsletter welcome email:', err);
+    });
 
     return NextResponse.json({
       message: 'Successfully subscribed to our newsletter!',
