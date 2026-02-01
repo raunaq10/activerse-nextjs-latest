@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { IBooking } from '@/models/Booking';
+import { PRICE_PER_PERSON } from '@/lib/config';
 
 export async function sendBookingConfirmationEmail(booking: IBooking): Promise<boolean> {
   try {
@@ -38,7 +39,6 @@ export async function sendBookingConfirmationEmail(booking: IBooking): Promise<b
     });
 
     const bookingTime = booking.booking_time;
-    const PRICE_PER_PERSON = 1500;
     const totalAmount = PRICE_PER_PERSON * booking.number_of_guests;
     const bookingId = booking._id?.toString() || 'N/A';
 
@@ -274,7 +274,7 @@ export async function sendNewsletterWelcomeEmail(email: string): Promise<boolean
                   
                   <p><strong>📞 Phone:</strong> +91 9729729347</p>
                   
-                  <p><strong>💰 Price:</strong> ₹1500 per person (Access to all game rooms)</p>
+                  <p><strong>💰 Price:</strong> ₹${PRICE_PER_PERSON.toLocaleString('en-IN')} per person (Access to all game rooms)</p>
                 </div>
               </div>
 

@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { IBooking } from '@/models/Booking';
+import { PRICE_PER_PERSON } from '@/lib/config';
 
 /**
  * Send booking notification email to admin when a new booking is created with payment
@@ -40,7 +41,6 @@ export async function sendAdminBookingNotification(booking: IBooking): Promise<b
       day: 'numeric',
     });
 
-    const PRICE_PER_PERSON = 1500;
     const totalAmount = PRICE_PER_PERSON * booking.number_of_guests;
     const bookingId = booking._id?.toString() || 'N/A';
 

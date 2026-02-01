@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Booking from '@/models/Booking';
 import { sendBookingConfirmationEmail } from '@/lib/emailNotifications';
 import { sendAdminBookingNotification } from '@/lib/adminEmailNotification';
+import { PRICE_PER_PERSON } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const PRICE_PER_PERSON = 1500;
     const totalAmount = PRICE_PER_PERSON * booking.number_of_guests;
 
     await Booking.updateOne(

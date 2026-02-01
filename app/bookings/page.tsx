@@ -465,7 +465,7 @@ export default function BookingsPage() {
                     <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <span style={{ fontWeight: 600, color: '#ec4899' }}>
-                          ₹{((booking.number_of_guests || 1) * 1500).toLocaleString('en-IN')}
+                          ₹{((booking.number_of_guests || 1) * (Number(process.env.NEXT_PUBLIC_PRICE_PER_PERSON) || 1500)).toLocaleString('en-IN')}
                         </span>
                         {booking.payment_status === 'paid' && booking.amount_paid > 0 && (
                           <span style={{ fontSize: '0.85rem', color: '#4caf50' }}>

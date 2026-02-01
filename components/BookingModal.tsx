@@ -27,7 +27,7 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  const PRICE_PER_PERSON = 1500;
+  const PRICE_PER_PERSON = Number(process.env.NEXT_PUBLIC_PRICE_PER_PERSON) || 1500;
   const totalAmount = PRICE_PER_PERSON * formData.number_of_guests;
 
   useEffect(() => {

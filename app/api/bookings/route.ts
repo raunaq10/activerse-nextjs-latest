@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/session';
 import connectDB from '@/lib/mongodb';
 import Booking from '@/models/Booking';
+import { PRICE_PER_PERSON } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +101,6 @@ export async function POST(request: Request) {
       }
     }
 
-    const PRICE_PER_PERSON = 1500;
     const totalAmount = PRICE_PER_PERSON * number_of_guests;
 
     const booking = await Booking.create({
