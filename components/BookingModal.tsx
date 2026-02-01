@@ -69,22 +69,18 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
       const orderData = await orderResponse.json();
 
       if (!orderResponse.ok) {
-        console.error('Order creation failed:', orderData);
         const errorMsg = orderData.error || 'Failed to create payment order';
-        const details = orderData.details ? ` (${orderData.details})` : '';
-        throw new Error(errorMsg + details);
+        throw new Error(errorMsg);
       }
 
       // Step 1.2 - Integrate with Checkout on Client-Side
-      // Using Handler Function approach as per Razorpay docs
       // Use NEXT_PUBLIC_RAZORPAY_KEY_ID for client-side access (as per Next.js docs)
-      // In Next.js, NEXT_PUBLIC_ variables are replaced at build time and available in browser
-      const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || orderData.key_id;
+      const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       
       if (!razorpayKeyId) {
-        throw new Error('Razorpay Key ID is not configured. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID in .env.local and restart the server.');
+        throw new Error('Payment gateway is not configured. Please contact support.');
       }
-      
+
       const options = {
         key: razorpayKeyId, // Enter the Key ID generated from the Dashboard (client-side accessible)
         amount: orderData.amount.toString(), // Amount is in currency subunits (paise)
@@ -166,17 +162,14 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
       
       // Handle payment failure
       rzp1.on('payment.failed', function (response: any) {
-        // Step 1.3 - Handle Payment Failure
-        console.error('Payment failed:', response.error);
-        setError(`Payment failed: ${response.error.description || response.error.reason || 'Please try again'}`);
+        setError('Payment failed. Please try again or contact support.');
         setIsProcessingPayment(false);
       });
 
       // Open Razorpay checkout
       rzp1.open();
     } catch (error: any) {
-      console.error('Payment initialization error:', error);
-      setError(`Payment error: ${error.message || 'Please try again'}`);
+      setError('Payment initialization failed. Please try again.');
       setIsProcessingPayment(false);
     }
   };

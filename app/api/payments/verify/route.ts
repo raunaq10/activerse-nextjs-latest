@@ -32,12 +32,8 @@ export async function POST(request: Request) {
 
     // Compare generated signature with received signature
     if (generated_signature !== razorpay_signature) {
-      console.error('Signature verification failed:', {
-        generated: generated_signature,
-        received: razorpay_signature,
-      });
       return NextResponse.json(
-        { error: 'Payment verification failed - Invalid signature' },
+        { error: 'Payment verification failed' },
         { status: 400 }
       );
     }
@@ -66,17 +62,17 @@ export async function POST(request: Request) {
       }
     );
 
-    // Send confirmation emails
+    // Send confirmation emails (async - don't block response)
     const updatedBooking = await Booking.findById(booking_id);
     if (updatedBooking) {
-      // Send email to customer
-      sendBookingConfirmationEmail(updatedBooking).catch((err) => {
-        console.error('Failed to send booking confirmation email to customer:', err);
+      // Send email to customer (fire and forget)
+      sendBookingConfirmationEmail(updatedBooking).catch(() => {
+        // Silent fail - email sending errors should not block payment confirmation
       });
       
-      // Send email to admin
-      sendAdminBookingNotification(updatedBooking).catch((err) => {
-        console.error('Failed to send admin booking notification:', err);
+      // Send email to admin (fire and forget)
+      sendAdminBookingNotification(updatedBooking).catch(() => {
+        // Silent fail - email sending errors should not block payment confirmation
       });
     }
 
@@ -87,9 +83,8 @@ export async function POST(request: Request) {
       payment_id: razorpay_payment_id,
     });
   } catch (error: any) {
-    console.error('Payment verification error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to verify payment' },
+      { error: 'Payment verification failed. Please contact support.' },
       { status: 500 }
     );
   }

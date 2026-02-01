@@ -26,15 +26,8 @@ export async function POST(request: Request) {
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     
     if (!keyId || !keySecret) {
-      console.error('Razorpay configuration missing:', {
-        keyId: keyId ? 'SET' : 'MISSING',
-        keySecret: keySecret ? 'SET' : 'MISSING',
-      });
       return NextResponse.json(
-        { 
-          error: 'Payment gateway is not configured. Please contact administrator.',
-          details: 'RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in environment variables.'
-        },
+        { error: 'Payment gateway is not configured. Please contact administrator.' },
         { status: 500 }
       );
     }
@@ -62,10 +55,16 @@ export async function POST(request: Request) {
     // Step 1.1 - Create Razorpay Order in Server
     // Amount should be in paise (smallest currency unit)
     // For ₹1500, amount should be 150000 (1500 * 100)
+    // Receipt must be max 40 characters (Razorpay requirement)
+    const bookingIdStr = booking_id.toString();
+    const shortBookingId = bookingIdStr.substring(bookingIdStr.length - 12); // Last 12 chars
+    const timestamp = Date.now().toString().slice(-8); // Last 8 digits
+    const receipt = `bk_${shortBookingId}_${timestamp}`; // Max 23 chars: bk_ + 12 + _ + 8
+    
     const options = {
       amount: Math.round(amount * 100), // Convert to paise (multiply by 100)
       currency: currency,
-      receipt: `booking_${booking_id}_${Date.now()}`, // Unique receipt ID
+      receipt: receipt, // Unique receipt ID (max 40 chars)
       notes: {
         booking_id: booking_id.toString(),
         name: booking.name,
@@ -78,12 +77,6 @@ export async function POST(request: Request) {
     try {
       const razorpay = getRazorpayInstance();
       const order = await razorpay.orders.create(options);
-      
-      console.log('✅ Razorpay order created successfully:', {
-        order_id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-      });
 
       // Update booking with order ID (store for verification)
       await Booking.updateOne(
@@ -93,39 +86,42 @@ export async function POST(request: Request) {
 
       // Return order details for client-side checkout
       // Note: key_id should be available via NEXT_PUBLIC_RAZORPAY_KEY_ID on client-side
-      // But we also return it as fallback if NEXT_PUBLIC_ is not set
       return NextResponse.json({
-        order_id: order.id, // Pass this to checkout
-        amount: order.amount, // Amount in paise
+        order_id: order.id,
+        amount: order.amount,
         currency: order.currency,
-        key_id: process.env.RAZORPAY_KEY_ID, // Fallback if NEXT_PUBLIC_ not available
       });
     } catch (razorpayError: any) {
-      console.error('Razorpay API error:', razorpayError);
+      // Handle validation errors (400)
+      if (razorpayError.statusCode === 400) {
+        return NextResponse.json(
+          { error: 'Invalid order parameters. Please try again.' },
+          { status: 400 }
+        );
+      }
+      
+      // Handle authentication errors (401)
+      if (razorpayError.statusCode === 401) {
+        return NextResponse.json(
+          { error: 'Payment gateway authentication failed. Please contact support.' },
+          { status: 401 }
+        );
+      }
+      
       throw razorpayError;
     }
   } catch (error: any) {
-    console.error('Razorpay order creation error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
-    
-    // Provide more helpful error messages
-    let errorMessage = 'Failed to create payment order';
-    if (error.message?.includes('key_id') || error.message?.includes('key')) {
-      errorMessage = 'Payment gateway configuration error. Please check Razorpay API keys.';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
+    // Generic error response for production
+    const statusCode = error.statusCode || 500;
+    const errorMessage = statusCode === 400 
+      ? 'Invalid request. Please check your input and try again.'
+      : statusCode === 401
+      ? 'Payment gateway authentication failed. Please contact support.'
+      : 'Payment order creation failed. Please try again later.';
     
     return NextResponse.json(
-      { 
-        error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      { status: 500 }
+      { error: errorMessage },
+      { status: statusCode }
     );
   }
 }

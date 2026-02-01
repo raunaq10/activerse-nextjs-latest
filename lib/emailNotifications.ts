@@ -7,15 +7,8 @@ export async function sendBookingConfirmationEmail(booking: IBooking): Promise<b
     const emailPassword = process.env.EMAIL_PASSWORD;
 
     if (!emailUser || !emailPassword) {
-      console.error('❌ Email configuration missing. Cannot send booking confirmation email.');
-      console.error('EMAIL_USER:', emailUser ? `${emailUser.substring(0, 3)}***` : 'NOT SET');
-      console.error('EMAIL_PASSWORD:', emailPassword ? 'SET' : 'NOT SET');
-      console.error('Please set EMAIL_USER and EMAIL_PASSWORD in .env.local file');
       return false;
     }
-
-    console.log('📧 Attempting to send booking confirmation email...');
-    console.log('Recipient:', booking.email);
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -23,12 +16,19 @@ export async function sendBookingConfirmationEmail(booking: IBooking): Promise<b
         user: emailUser,
         pass: emailPassword,
       },
+      // Works in both development and production
+      secure: true,
+      tls: {
+        rejectUnauthorized: false, // Allow self-signed certificates if needed
+      },
     });
 
     // Verify connection before sending
-    console.log('Verifying email connection...');
-    await transporter.verify();
-    console.log('✓ Email connection verified successfully');
+    try {
+      await transporter.verify();
+    } catch (verifyError: any) {
+      throw verifyError;
+    }
 
     const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-IN', {
       weekday: 'long',
@@ -143,10 +143,8 @@ export async function sendBookingConfirmationEmail(booking: IBooking): Promise<b
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`✓ Booking confirmation email sent successfully to ${booking.email}`);
     return true;
-  } catch (error) {
-    console.error('❌ Error sending booking confirmation email:', error);
+  } catch (error: any) {
     return false;
   }
 }
@@ -160,12 +158,8 @@ export async function sendNewsletterWelcomeEmail(email: string): Promise<boolean
     const emailPassword = process.env.EMAIL_PASSWORD;
 
     if (!emailUser || !emailPassword) {
-      console.error('❌ Email configuration missing. Cannot send newsletter welcome email.');
       return false;
     }
-
-    console.log('📧 Sending newsletter welcome email...');
-    console.log('Recipient:', email);
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -173,11 +167,19 @@ export async function sendNewsletterWelcomeEmail(email: string): Promise<boolean
         user: emailUser,
         pass: emailPassword,
       },
+      // Works in both development and production
+      secure: true,
+      tls: {
+        rejectUnauthorized: false, // Allow self-signed certificates if needed
+      },
     });
 
     // Verify connection before sending
-    await transporter.verify();
-    console.log('✓ Email connection verified successfully for newsletter welcome email');
+    try {
+      await transporter.verify();
+    } catch (verifyError: any) {
+      throw verifyError;
+    }
 
     const mailOptions = {
       from: emailUser,
@@ -300,10 +302,8 @@ export async function sendNewsletterWelcomeEmail(email: string): Promise<boolean
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`✓ Newsletter welcome email sent successfully to ${email}`);
     return true;
-  } catch (error) {
-    console.error('❌ Error sending newsletter welcome email:', error);
+  } catch (error: any) {
     return false;
   }
 }

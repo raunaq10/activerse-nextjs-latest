@@ -40,10 +40,18 @@ export async function POST(request: Request) {
         existingSubscriber.subscribed_at = new Date();
         await existingSubscriber.save();
 
-        // Send welcome email with contact and game details
-        sendNewsletterWelcomeEmail(emailLower).catch((err) => {
-          console.error('Failed to send newsletter welcome email:', err);
-        });
+        // Send welcome email with contact and game details (async - don't block response)
+        sendNewsletterWelcomeEmail(emailLower)
+          .then((success) => {
+            if (success) {
+              console.log(`✅ Newsletter welcome email sent to: ${emailLower}`);
+            } else {
+              console.error(`❌ Failed to send newsletter welcome email to: ${emailLower}`);
+            }
+          })
+          .catch((err) => {
+            console.error('❌ Error sending newsletter welcome email:', err);
+          });
 
         return NextResponse.json({
           message: 'Successfully resubscribed to our newsletter!',
@@ -57,10 +65,18 @@ export async function POST(request: Request) {
       active: true,
     });
 
-    // Send welcome email with contact and game details
-    sendNewsletterWelcomeEmail(emailLower).catch((err) => {
-      console.error('Failed to send newsletter welcome email:', err);
-    });
+    // Send welcome email with contact and game details (async - don't block response)
+    sendNewsletterWelcomeEmail(emailLower)
+      .then((success) => {
+        if (success) {
+          console.log(`✅ Newsletter welcome email sent to: ${emailLower}`);
+        } else {
+          console.error(`❌ Failed to send newsletter welcome email to: ${emailLower}`);
+        }
+      })
+      .catch((err) => {
+        console.error('❌ Error sending newsletter welcome email:', err);
+      });
 
     return NextResponse.json({
       message: 'Successfully subscribed to our newsletter!',

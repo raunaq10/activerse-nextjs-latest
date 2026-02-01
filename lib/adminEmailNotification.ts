@@ -11,12 +11,8 @@ export async function sendAdminBookingNotification(booking: IBooking): Promise<b
     const adminEmail = process.env.ADMIN_EMAIL || emailUser;
 
     if (!emailUser || !emailPassword) {
-      console.error('❌ Email configuration missing. Cannot send admin notification.');
       return false;
     }
-
-    console.log('📧 Sending admin booking notification...');
-    console.log('Admin Email:', adminEmail);
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -24,9 +20,18 @@ export async function sendAdminBookingNotification(booking: IBooking): Promise<b
         user: emailUser,
         pass: emailPassword,
       },
+      // Works in both development and production
+      secure: true,
+      tls: {
+        rejectUnauthorized: false, // Allow self-signed certificates if needed
+      },
     });
 
-    await transporter.verify();
+    try {
+      await transporter.verify();
+    } catch (verifyError: any) {
+      throw verifyError;
+    }
 
     const bookingDate = new Date(booking.booking_date).toLocaleDateString('en-IN', {
       weekday: 'long',
@@ -135,10 +140,8 @@ export async function sendAdminBookingNotification(booking: IBooking): Promise<b
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`✓ Admin booking notification sent successfully to ${adminEmail}`);
     return true;
-  } catch (error) {
-    console.error('❌ Error sending admin booking notification:', error);
+  } catch (error: any) {
     return false;
   }
 }
