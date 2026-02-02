@@ -218,8 +218,10 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
           setIsSubmitting(false);
           return;
         }
-        // Initiate payment
-        await handlePayment(data.booking.id, totalAmount);
+        // Initiate payment - use the validated guests count
+        const finalGuestsCount = typeof formData.number_of_guests === 'number' ? formData.number_of_guests : 1;
+        const finalTotalAmount = pricePerPerson * finalGuestsCount;
+        await handlePayment(data.booking.id, finalTotalAmount);
       } else {
         setError(data.error || 'Failed to submit booking. Please try again.');
         setIsSubmitting(false);
@@ -314,6 +316,8 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 <option value="22:00">10-11 PM</option>
               </select>
             </div>
+          </div>
+          <div className="form-row">
             <div className="form-group">
               <label htmlFor="slot-duration">Slot Duration *</label>
               <select
@@ -328,8 +332,6 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 <option value="60">1 Hour - ₹{SLOT_PRICES[60].toLocaleString('en-IN')} per person</option>
               </select>
             </div>
-          </div>
-          <div className="form-row">
             <div className="form-group">
               <label htmlFor="booking-guests">Number of Guests *</label>
               <input
@@ -359,7 +361,7 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
           <div className="form-group" style={{ background: 'rgba(236, 72, 153, 0.1)', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '1.1rem', fontWeight: 600, color: '#ec4899' }}>Total Amount:</span>
-              <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ec4899' }}>₹{totalAmount.toLocaleString('en-IN')}</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ec4899' }}>{guestsCount > 0 ? `₹${totalAmount.toLocaleString('en-IN')}` : '₹0'}</span>
             </div>
             <small className="text-white/70 text-sm mt-1 block">
               Payment will be processed securely via Razorpay
@@ -374,7 +376,7 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
             disabled={isSubmitting || isProcessingPayment}
             style={{ background: isSubmitting || isProcessingPayment ? '#666' : undefined }}
           >
-            {isSubmitting ? 'Creating Booking...' : isProcessingPayment ? 'Processing Payment...' : `Pay ₹${totalAmount.toLocaleString('en-IN')} & Book`}
+            {isSubmitting ? 'Creating Booking...' : isProcessingPayment ? 'Processing Payment...' : guestsCount > 0 ? `Pay ₹${totalAmount.toLocaleString('en-IN')} & Book` : 'Enter Number of Guests'}
           </button>
         </form>
       </div>
