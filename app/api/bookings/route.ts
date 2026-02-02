@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/session';
 import connectDB from '@/lib/mongodb';
 import Booking from '@/models/Booking';
-import { PRICE_PER_PERSON } from '@/lib/config';
+import { getPriceForSlotDuration } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +39,10 @@ export async function POST(request: Request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { name, email, phone, booking_date, booking_time, number_of_guests, special_requests } = body;
+    const { name, email, phone, booking_date, booking_time, slot_duration, number_of_guests, special_requests } = body;
+
+    // Validate slot_duration (default to 60 if not provided for backward compatibility)
+    const validSlotDuration = slot_duration === 30 || slot_duration === 60 ? slot_duration : 60;
 
     if (!name || !email || !phone || !booking_date || !booking_time || !number_of_guests || number_of_guests < 1) {
       return NextResponse.json(
@@ -101,7 +104,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const totalAmount = PRICE_PER_PERSON * number_of_guests;
+    const pricePerPerson = getPriceForSlotDuration(validSlotDuration);
+    const totalAmount = pricePerPerson * number_of_guests;
 
     const booking = await Booking.create({
       name,
@@ -109,6 +113,7 @@ export async function POST(request: Request) {
       phone,
       booking_date,
       booking_time,
+      slot_duration: validSlotDuration,
       number_of_guests,
       special_requests: special_requests || '',
       status: 'pending',
@@ -138,6 +143,7 @@ export async function POST(request: Request) {
           phone,
           booking_date,
           booking_time,
+          slot_duration: validSlotDuration,
           number_of_guests,
           special_requests,
           status: 'pending',

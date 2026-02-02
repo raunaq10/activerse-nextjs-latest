@@ -62,6 +62,18 @@ A modern, full-stack booking system for Activerse arcade and entertainment locat
    EMAIL_USER=your-email@gmail.com
    EMAIL_PASSWORD=your-app-password
    CONTACT_EMAIL=your-email@gmail.com
+   ADMIN_EMAIL=admin@example.com
+
+   # Razorpay Payment Gateway (Test Mode)
+   RAZORPAY_KEY_ID=your-razorpay-key-id
+   RAZORPAY_KEY_SECRET=your-razorpay-key-secret
+   NEXT_PUBLIC_RAZORPAY_KEY_ID=your-razorpay-key-id
+
+   # Slot Pricing Configuration
+   SLOT_1_PRICE=1000          # Price for 30 minutes slot (per person)
+   SLOT_2_PRICE=1500          # Price for 1 hour slot (per person)
+   NEXT_PUBLIC_SLOT_1_PRICE=1000  # Client-side accessible (30 minutes)
+   NEXT_PUBLIC_SLOT_2_PRICE=1500  # Client-side accessible (1 hour)
 
    # Node Environment
    NODE_ENV=development

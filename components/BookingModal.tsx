@@ -20,15 +20,23 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
     phone: '',
     booking_date: '',
     booking_time: '',
-    number_of_guests: 1,
+    slot_duration: 60 as 30 | 60, // Default to 1 hour
+    number_of_guests: '' as number | '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
-  const PRICE_PER_PERSON = Number(process.env.NEXT_PUBLIC_PRICE_PER_PERSON) || 1500;
-  const totalAmount = PRICE_PER_PERSON * formData.number_of_guests;
+  // Slot-based pricing from environment variables (client-side accessible)
+  const SLOT_PRICES = {
+    30: Number(process.env.NEXT_PUBLIC_SLOT_1_PRICE) || 1000, // 30 minutes slot
+    60: Number(process.env.NEXT_PUBLIC_SLOT_2_PRICE) || 1500, // 1 hour slot
+  } as const;
+
+  const pricePerPerson = SLOT_PRICES[formData.slot_duration];
+  const guestsCount = typeof formData.number_of_guests === 'number' ? formData.number_of_guests : 0;
+  const totalAmount = pricePerPerson * guestsCount;
 
   useEffect(() => {
     if (isOpen) {
@@ -86,7 +94,7 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
         amount: orderData.amount.toString(), // Amount is in currency subunits (paise)
         currency: orderData.currency,
         name: 'Activerse', // Your business name
-        description: `Booking for ${formData.number_of_guests} guest(s) - Access to all game rooms`,
+        description: `Booking for ${guestsCount} guest(s) - ${formData.slot_duration} minutes slot - Access to all game rooms`,
         order_id: orderData.order_id, // Pass the `id` obtained in the response of Step 1
         prefill: {
           // We recommend using the prefill parameter to auto-fill customer's contact information
@@ -96,9 +104,10 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
         },
         notes: {
           booking_id: bookingId,
-          number_of_guests: formData.number_of_guests.toString(),
+          number_of_guests: guestsCount.toString(),
           booking_date: formData.booking_date,
           booking_time: formData.booking_time,
+          slot_duration: formData.slot_duration.toString(),
         },
         theme: {
           color: '#ec4899', // Activerse brand color
@@ -134,7 +143,8 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 phone: '',
                 booking_date: '',
                 booking_time: '',
-                number_of_guests: 1,
+                slot_duration: 60,
+                number_of_guests: '',
               });
               setTimeout(() => {
                 onClose();
@@ -179,8 +189,9 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
     setError('');
     setSuccess('');
 
+    const guestsCount = typeof formData.number_of_guests === 'number' ? formData.number_of_guests : 0;
     if (!formData.name || !formData.email || !formData.phone || !formData.booking_date || 
-        !formData.booking_time || !formData.number_of_guests || formData.number_of_guests < 1) {
+        !formData.booking_time || !formData.slot_duration || !formData.number_of_guests || guestsCount < 1) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -303,6 +314,20 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 <option value="22:00">10-11 PM</option>
               </select>
             </div>
+            <div className="form-group">
+              <label htmlFor="slot-duration">Slot Duration *</label>
+              <select
+                id="slot-duration"
+                name="slot_duration"
+                required
+                value={formData.slot_duration}
+                onChange={(e) => setFormData({ ...formData, slot_duration: parseInt(e.target.value) as 30 | 60 })}
+                className="w-full"
+              >
+                <option value="30">30 Minutes - ₹{SLOT_PRICES[30].toLocaleString('en-IN')} per person</option>
+                <option value="60">1 Hour - ₹{SLOT_PRICES[60].toLocaleString('en-IN')} per person</option>
+              </select>
+            </div>
           </div>
           <div className="form-row">
             <div className="form-group">
@@ -315,11 +340,17 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 max="50"
                 required
                 value={formData.number_of_guests}
-                onChange={(e) => setFormData({ ...formData, number_of_guests: parseInt(e.target.value) || 1 })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    number_of_guests: value === '' ? '' : parseInt(value) || '' 
+                  });
+                }}
                 className="w-full"
               />
               <small className="text-white/70 text-sm mt-1 block">
-                Price: ₹{PRICE_PER_PERSON.toLocaleString('en-IN')} per person
+                Price: ₹{pricePerPerson.toLocaleString('en-IN')} per person ({formData.slot_duration} minutes)
               </small>
             </div>
           </div>

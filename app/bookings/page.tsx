@@ -13,6 +13,7 @@ interface Booking {
   phone: string;
   booking_date: string;
   booking_time: string;
+  slot_duration?: number;
   number_of_guests: number;
   status: string;
   payment_status: string;
@@ -414,6 +415,7 @@ export default function BookingsPage() {
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.3)', color: '#4CAF50', fontWeight: 600, textTransform: 'uppercase', fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Phone</th>
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.3)', color: '#4CAF50', fontWeight: 600, textTransform: 'uppercase', fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Date</th>
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.3)', color: '#4CAF50', fontWeight: 600, textTransform: 'uppercase', fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Time</th>
+                  <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.3)', color: '#4CAF50', fontWeight: 600, textTransform: 'uppercase', fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Duration</th>
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.3)', color: '#4CAF50', fontWeight: 600, textTransform: 'uppercase', fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Guests</th>
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.3)', color: '#4CAF50', fontWeight: 600, textTransform: 'uppercase', fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Status</th>
                   <th style={{ padding: '1rem', textAlign: 'left', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(0, 0, 0, 0.3)', color: '#4CAF50', fontWeight: 600, textTransform: 'uppercase', fontSize: 'clamp(0.7rem, 1.5vw, 0.85rem)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Payment</th>
@@ -430,6 +432,7 @@ export default function BookingsPage() {
                     <td style={{ padding: '1rem', color: 'rgba(255, 255, 255, 0.8)', fontSize: 'clamp(0.8rem, 1.5vw, 0.9rem)' }}>{booking.phone}</td>
                     <td style={{ padding: '1rem', color: 'rgba(255, 255, 255, 0.8)', fontSize: 'clamp(0.8rem, 1.5vw, 0.9rem)', whiteSpace: 'nowrap' }}>{new Date(booking.booking_date).toLocaleDateString()}</td>
                     <td style={{ padding: '1rem', color: 'rgba(255, 255, 255, 0.8)', fontSize: 'clamp(0.8rem, 1.5vw, 0.9rem)' }}>{booking.booking_time}</td>
+                    <td style={{ padding: '1rem', color: 'rgba(255, 255, 255, 0.8)', fontSize: 'clamp(0.8rem, 1.5vw, 0.9rem)' }}>{booking.slot_duration || 60} min</td>
                     <td style={{ padding: '1rem', color: 'rgba(255, 255, 255, 0.8)', fontSize: 'clamp(0.8rem, 1.5vw, 0.9rem)' }}>{booking.number_of_guests}</td>
                     <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>
                       <span
@@ -465,7 +468,7 @@ export default function BookingsPage() {
                     <td style={{ padding: '1rem', color: 'var(--gray-text)' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <span style={{ fontWeight: 600, color: '#ec4899' }}>
-                          ₹{((booking.number_of_guests || 1) * (Number(process.env.NEXT_PUBLIC_PRICE_PER_PERSON) || 1500)).toLocaleString('en-IN')}
+                          ₹{((booking.number_of_guests || 1) * (booking.slot_duration === 30 ? (Number(process.env.NEXT_PUBLIC_SLOT_1_PRICE) || 1000) : (Number(process.env.NEXT_PUBLIC_SLOT_2_PRICE) || 1500))).toLocaleString('en-IN')}
                         </span>
                         {booking.payment_status === 'paid' && booking.amount_paid > 0 && (
                           <span style={{ fontSize: '0.85rem', color: '#4caf50' }}>

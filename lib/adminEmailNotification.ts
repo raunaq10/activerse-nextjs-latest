@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { IBooking } from '@/models/Booking';
-import { PRICE_PER_PERSON } from '@/lib/config';
+import { getPriceForSlotDuration } from '@/lib/config';
 
 /**
  * Send booking notification email to admin when a new booking is created with payment
@@ -41,7 +41,9 @@ export async function sendAdminBookingNotification(booking: IBooking): Promise<b
       day: 'numeric',
     });
 
-    const totalAmount = PRICE_PER_PERSON * booking.number_of_guests;
+    const slotDuration = booking.slot_duration || 60; // Default to 60 for backward compatibility
+    const pricePerPerson = getPriceForSlotDuration(slotDuration);
+    const totalAmount = pricePerPerson * booking.number_of_guests;
     const bookingId = booking._id?.toString() || 'N/A';
 
     const mailOptions = {
@@ -96,6 +98,9 @@ export async function sendAdminBookingNotification(booking: IBooking): Promise<b
                 </div>
                 <div class="detail-row">
                   <span class="label">Booking Time:</span> ${booking.booking_time}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Slot Duration:</span> ${slotDuration} minutes
                 </div>
                 <div class="detail-row">
                   <span class="label">Number of Guests:</span> ${booking.number_of_guests}

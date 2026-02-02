@@ -4,7 +4,7 @@ import connectDB from '@/lib/mongodb';
 import Booking from '@/models/Booking';
 import { sendBookingConfirmationEmail } from '@/lib/emailNotifications';
 import { sendAdminBookingNotification } from '@/lib/adminEmailNotification';
-import { PRICE_PER_PERSON } from '@/lib/config';
+import { getPriceForSlotDuration } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +48,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const totalAmount = PRICE_PER_PERSON * booking.number_of_guests;
+    const slotDuration = booking.slot_duration || 60; // Default to 60 for backward compatibility
+    const pricePerPerson = getPriceForSlotDuration(slotDuration);
+    const totalAmount = pricePerPerson * booking.number_of_guests;
 
     await Booking.updateOne(
       { _id: booking_id },

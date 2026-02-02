@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { IBooking } from '@/models/Booking';
-import { PRICE_PER_PERSON } from '@/lib/config';
+import { getPriceForSlotDuration } from '@/lib/config';
 
 export async function sendBookingConfirmationEmail(booking: IBooking): Promise<boolean> {
   try {
@@ -39,7 +39,9 @@ export async function sendBookingConfirmationEmail(booking: IBooking): Promise<b
     });
 
     const bookingTime = booking.booking_time;
-    const totalAmount = PRICE_PER_PERSON * booking.number_of_guests;
+    const slotDuration = booking.slot_duration || 60; // Default to 60 for backward compatibility
+    const pricePerPerson = getPriceForSlotDuration(slotDuration);
+    const totalAmount = pricePerPerson * booking.number_of_guests;
     const bookingId = booking._id?.toString() || 'N/A';
 
     const mailOptions = {
@@ -92,6 +94,9 @@ export async function sendBookingConfirmationEmail(booking: IBooking): Promise<b
                 </div>
                 <div class="detail-row">
                   <span class="label">Booking Time:</span> ${bookingTime}
+                </div>
+                <div class="detail-row">
+                  <span class="label">Slot Duration:</span> ${slotDuration} minutes
                 </div>
                 <div class="detail-row">
                   <span class="label">Number of Guests:</span> ${booking.number_of_guests}
@@ -274,7 +279,10 @@ export async function sendNewsletterWelcomeEmail(email: string): Promise<boolean
                   
                   <p><strong>📞 Phone:</strong> +91 9729729347</p>
                   
-                  <p><strong>💰 Price:</strong> ₹${PRICE_PER_PERSON.toLocaleString('en-IN')} per person (Access to all game rooms)</p>
+                  <p><strong>💰 Pricing:</strong><br>
+                  • 30 Minutes: ₹${(Number(process.env.SLOT_1_PRICE) || 1000).toLocaleString('en-IN')} per person<br>
+                  • 1 Hour: ₹${(Number(process.env.SLOT_2_PRICE) || 1500).toLocaleString('en-IN')} per person<br>
+                  (Access to all game rooms)</p>
                 </div>
               </div>
 

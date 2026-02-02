@@ -7,6 +7,7 @@ export interface IBooking {
   phone: string;
   booking_date: string;
   booking_time: string;
+  slot_duration: 30 | 60; // Duration in minutes: 30 or 60
   number_of_guests: number;
   special_requests?: string;
   status?: 'pending' | 'confirmed' | 'cancelled';
@@ -38,6 +39,12 @@ const bookingSchema = new Schema<IBooking>({
   booking_time: {
     type: String,
     required: true,
+  },
+  slot_duration: {
+    type: Number,
+    required: true,
+    enum: [30, 60], // 30 minutes or 60 minutes (1 hour)
+    default: 60, // Default to 1 hour for backward compatibility
   },
   number_of_guests: {
     type: Number,
