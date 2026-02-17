@@ -1,11 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { getDefaultTimeSlots30Min, getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
 
 declare global {
   interface Window {
     Razorpay: any;
   }
+}
+
+interface TimeSlotOption {
+  value: string;
+  label: string;
+  enabled: boolean;
+}
+
+interface SlotAvailability {
+  booked: number;
+  max: number;
+  isFull: boolean;
 }
 
 interface BookingModalProps {
@@ -27,6 +40,12 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [timeSlots30Min, setTimeSlots30Min] = useState<TimeSlotOption[]>([]);
+  const [timeSlots60Min, setTimeSlots60Min] = useState<TimeSlotOption[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlotOption[]>([]);
+  const [slotAvailability, setSlotAvailability] = useState<Record<string, SlotAvailability>>({});
+  const [slotDurationsEnabled, setSlotDurationsEnabled] = useState({ thirtyMinutes: true, sixtyMinutes: true });
+  const [maxGuestsPerSlot, setMaxGuestsPerSlot] = useState(24);
 
   // Slot-based pricing from environment variables (client-side accessible)
   const SLOT_PRICES = {
@@ -38,12 +57,52 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
   const guestsCount = typeof formData.number_of_guests === 'number' ? formData.number_of_guests : 0;
   const totalAmount = pricePerPerson * guestsCount;
 
+  const fetchAvailability = useCallback(async (date: string, duration: 30 | 60) => {
+    if (!date) {
+      setSlotAvailability({});
+      return;
+    }
+    try {
+      const res = await fetch(`/api/availability/${date}?duration=${duration}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSlotAvailability(data.availability || {});
+        if (data.timeSlots?.length) {
+          setTimeSlots(data.timeSlots);
+        }
+      }
+    } catch {
+      setSlotAvailability({});
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       const today = new Date().toISOString().split('T')[0];
       setFormData((prev) => ({ ...prev, booking_date: prev.booking_date || today }));
-      
-      // Load Razorpay script
+
+      fetch('/api/booking-settings/public')
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => {
+          setTimeSlots30Min(Array.isArray(data?.timeSlots30Min) && data.timeSlots30Min.length > 0 ? data.timeSlots30Min : getDefaultTimeSlots30Min());
+          setTimeSlots60Min(Array.isArray(data?.timeSlots60Min) && data.timeSlots60Min.length > 0 ? data.timeSlots60Min : getDefaultTimeSlots60Min());
+          if (data?.slotDurationsEnabled && typeof data.slotDurationsEnabled === 'object') {
+            setSlotDurationsEnabled({
+              thirtyMinutes: typeof data.slotDurationsEnabled.thirtyMinutes === 'boolean' ? data.slotDurationsEnabled.thirtyMinutes : true,
+              sixtyMinutes: typeof data.slotDurationsEnabled.sixtyMinutes === 'boolean' ? data.slotDurationsEnabled.sixtyMinutes : true,
+            });
+          }
+          if (typeof data?.maxBookingsPerSlot === 'number' && data.maxBookingsPerSlot >= 1) {
+            setMaxGuestsPerSlot(data.maxBookingsPerSlot);
+          }
+        })
+        .catch(() => {
+          setTimeSlots30Min(getDefaultTimeSlots30Min());
+          setTimeSlots60Min(getDefaultTimeSlots60Min());
+        });
+
+      fetchAvailability(today, formData.slot_duration);
+
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
@@ -55,7 +114,30 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
         }
       };
     }
-  }, [isOpen]);
+  }, [isOpen, fetchAvailability]);
+
+  useEffect(() => {
+    if (formData.booking_date) {
+      fetchAvailability(formData.booking_date, formData.slot_duration);
+    } else {
+      setSlotAvailability({});
+    }
+  }, [formData.booking_date, formData.slot_duration, fetchAvailability]);
+
+  useEffect(() => {
+    const list = formData.slot_duration === 30 ? timeSlots30Min : timeSlots60Min;
+    if (list.length) setTimeSlots(list);
+  }, [formData.slot_duration, timeSlots30Min, timeSlots60Min]);
+
+  useEffect(() => {
+    const valid30 = slotDurationsEnabled.thirtyMinutes;
+    const valid60 = slotDurationsEnabled.sixtyMinutes;
+    if (formData.slot_duration === 30 && !valid30 && valid60) {
+      setFormData((prev) => ({ ...prev, slot_duration: 60, booking_time: '' }));
+    } else if (formData.slot_duration === 60 && !valid60 && valid30) {
+      setFormData((prev) => ({ ...prev, slot_duration: 30, booking_time: '' }));
+    }
+  }, [slotDurationsEnabled, formData.slot_duration]);
 
   const handlePayment = async (bookingId: string, amount: number) => {
     try {
@@ -195,6 +277,10 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
       setError('Please fill in all required fields.');
       return;
     }
+    if (guestsCount > maxGuestsPerSlot) {
+      setError(`Number of guests cannot exceed ${maxGuestsPerSlot}.`);
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -280,6 +366,30 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
           </div>
           <div className="form-row">
             <div className="form-group">
+              <label htmlFor="slot-duration">Slot Duration *</label>
+              <select
+                id="slot-duration"
+                name="slot_duration"
+                required
+                value={formData.slot_duration}
+                onChange={(e) => setFormData({ ...formData, slot_duration: parseInt(e.target.value) as 30 | 60, booking_time: '' })}
+                className="w-full"
+              >
+                {slotDurationsEnabled.thirtyMinutes && (
+                  <option value="30">30 Minutes - ₹{SLOT_PRICES[30].toLocaleString('en-IN')} per person</option>
+                )}
+                {slotDurationsEnabled.sixtyMinutes && (
+                  <option value="60">1 Hour - ₹{SLOT_PRICES[60].toLocaleString('en-IN')} per person</option>
+                )}
+                {!slotDurationsEnabled.thirtyMinutes && !slotDurationsEnabled.sixtyMinutes && (
+                  <>
+                    <option value="30">30 Minutes - ₹{SLOT_PRICES[30].toLocaleString('en-IN')} per person</option>
+                    <option value="60">1 Hour - ₹{SLOT_PRICES[60].toLocaleString('en-IN')} per person</option>
+                  </>
+                )}
+              </select>
+            </div>
+            <div className="form-group">
               <label htmlFor="booking-date">Date *</label>
               <input
                 type="date"
@@ -292,45 +402,92 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 className="w-full"
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="booking-time">Time *</label>
-              <select
-                id="booking-time"
-                name="booking_time"
-                required
-                value={formData.booking_time}
-                onChange={(e) => setFormData({ ...formData, booking_time: e.target.value })}
-                className="w-full"
-              >
-                <option value="">Select Time</option>
-                <option value="12:00">12-1 PM</option>
-                <option value="13:00">1-2 PM</option>
-                <option value="14:00">2-3 PM</option>
-                <option value="15:00">3-4 PM</option>
-                <option value="16:00">4-5 PM</option>
-                <option value="17:00">5-6 PM</option>
-                <option value="18:00">6-7 PM</option>
-                <option value="19:00">7-8 PM</option>
-                <option value="20:00">8-9 PM</option>
-                <option value="21:00">9-10 PM</option>
-                <option value="22:00">10-11 PM</option>
-              </select>
-            </div>
           </div>
           <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="slot-duration">Slot Duration *</label>
-              <select
-                id="slot-duration"
-                name="slot_duration"
-                required
-                value={formData.slot_duration}
-                onChange={(e) => setFormData({ ...formData, slot_duration: parseInt(e.target.value) as 30 | 60 })}
-                className="w-full"
-              >
-                <option value="30">30 Minutes - ₹{SLOT_PRICES[30].toLocaleString('en-IN')} per person</option>
-                <option value="60">1 Hour - ₹{SLOT_PRICES[60].toLocaleString('en-IN')} per person</option>
-              </select>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label htmlFor="booking-time">Time *</label>
+              {formData.booking_time ? (
+                <div
+                  style={{
+                    padding: '0.6rem 0.75rem',
+                    border: '1px solid rgba(236, 72, 153, 0.4)',
+                    borderRadius: '8px',
+                    background: 'rgba(236, 72, 153, 0.15)',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>
+                    {timeSlots.find((s) => s.value === formData.booking_time)?.label ?? formData.booking_time}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, booking_time: '' })}
+                    style={{
+                      padding: '0.25rem 0.6rem',
+                      fontSize: '0.85rem',
+                      background: 'transparent',
+                      color: 'rgba(255,255,255,0.9)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <div
+                  role="listbox"
+                  aria-label="Select time slot"
+                  id="booking-time"
+                  className="w-full"
+                  style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}
+                >
+                  {timeSlots.map((slot) => {
+                    const avail = slotAvailability[slot.value];
+                    const isFull = avail?.isFull ?? false;
+                    return (
+                      <div
+                        key={slot.value}
+                        role="option"
+                        aria-disabled={isFull ? 'true' : 'false'}
+                        tabIndex={0}
+                        onClick={() => !isFull && setFormData({ ...formData, booking_time: slot.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (!isFull) setFormData({ ...formData, booking_time: slot.value });
+                          }
+                        }}
+                        title={isFull ? 'This slot is full, choose different' : undefined}
+                        style={{
+                          padding: '0.6rem 0.75rem',
+                          borderBottom: '1px solid rgba(255,255,255,0.08)',
+                          cursor: isFull ? 'not-allowed' : 'pointer',
+                          opacity: isFull ? 0.7 : 1,
+                          background: 'transparent',
+                          color: isFull ? 'rgba(255,255,255,0.6)' : '#fff',
+                        }}
+                      >
+                        <span>{slot.label}{isFull ? ' (Full)' : ''}</span>
+                        {!isFull && avail && (
+                          <span className="text-white/60 text-sm block mt-0.5">
+                            {avail.max - avail.booked} spots left
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {formData.booking_time && slotAvailability[formData.booking_time]?.isFull && (
+                <small className="text-white/70 text-sm mt-1 block">This slot is full, choose different</small>
+              )}
             </div>
             <div className="form-group">
               <label htmlFor="booking-guests">Number of Guests *</label>
@@ -338,21 +495,25 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 type="number"
                 id="booking-guests"
                 name="number_of_guests"
-                min="1"
-                max="50"
+                min={1}
+                max={maxGuestsPerSlot}
                 required
                 value={formData.number_of_guests}
                 onChange={(e) => {
                   const value = e.target.value;
-                  setFormData({ 
-                    ...formData, 
-                    number_of_guests: value === '' ? '' : parseInt(value) || '' 
-                  });
+                  if (value === '') {
+                    setFormData({ ...formData, number_of_guests: '' });
+                    return;
+                  }
+                  const num = parseInt(value, 10);
+                  if (!isNaN(num)) {
+                    setFormData({ ...formData, number_of_guests: Math.min(maxGuestsPerSlot, Math.max(1, num)) });
+                  }
                 }}
                 className="w-full"
               />
               <small className="text-white/70 text-sm mt-1 block">
-                Price: ₹{pricePerPerson.toLocaleString('en-IN')} per person ({formData.slot_duration} minutes)
+                Price: ₹{pricePerPerson.toLocaleString('en-IN')} per person ({formData.slot_duration} min). Max {maxGuestsPerSlot} guests.
               </small>
             </div>
           </div>

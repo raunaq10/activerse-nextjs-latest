@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import BookingModal from '@/components/BookingModal';
+import BookingSettingsModal from '@/components/BookingSettingsModal';
 
 interface Booking {
   _id: string;
@@ -29,6 +30,7 @@ export default function BookingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [changePasswordData, setChangePasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -279,27 +281,47 @@ export default function BookingsPage() {
       <div className="bookings-container" style={{ padding: '150px 20px 50px', maxWidth: '1400px', margin: '0 auto', minHeight: '100vh' }}>
         <div className="bookings-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <h1 className="section-title" style={{ margin: 0, fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 700, color: '#fff' }}>Booking Management</h1>
-          <button 
-            onClick={() => setIsBookingModalOpen(true)}
-            className="btn btn-primary" 
-            style={{ 
-              padding: '0.75rem 1.5rem', 
-              background: '#4CAF50', 
-              color: 'white', 
-              borderRadius: '8px', 
-              textDecoration: 'none', 
-              fontWeight: 600, 
-              transition: 'all 0.3s', 
-              display: 'inline-block',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 'clamp(0.9rem, 1.5vw, 1rem)'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#45a049'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#4CAF50'}
-          >
-            New Booking
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              className="btn"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                borderRadius: '8px',
+                fontWeight: 600,
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                cursor: 'pointer',
+                fontSize: 'clamp(0.9rem, 1.5vw, 1rem)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+            >
+              Booking Settings
+            </button>
+            <button 
+              onClick={() => setIsBookingModalOpen(true)}
+              className="btn btn-primary" 
+              style={{ 
+                padding: '0.75rem 1.5rem', 
+                background: '#4CAF50', 
+                color: 'white', 
+                borderRadius: '8px', 
+                textDecoration: 'none', 
+                fontWeight: 600, 
+                transition: 'all 0.3s', 
+                display: 'inline-block',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 'clamp(0.9rem, 1.5vw, 1rem)'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#45a049'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#4CAF50'}
+            >
+              New Booking
+            </button>
+          </div>
         </div>
 
         <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
@@ -579,10 +601,15 @@ export default function BookingsPage() {
         isOpen={isBookingModalOpen} 
         onClose={() => {
           setIsBookingModalOpen(false);
-          // Refresh bookings after successful booking
           loadBookings(currentFilter);
           loadStats();
         }} 
+      />
+
+      {/* Booking Settings Modal */}
+      <BookingSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
     </>
   );

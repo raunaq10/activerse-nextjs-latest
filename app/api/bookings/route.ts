@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/session';
 import connectDB from '@/lib/mongodb';
 import Booking from '@/models/Booking';
 import { getPriceForSlotDuration } from '@/lib/config';
+import { getDefaultTimeSlots30Min, getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,6 +51,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    const { getSettingsForDate } = await import('@/lib/getBookingSettings');
+    const settings = await getSettingsForDate(booking_date);
+    const maxPerSlot = settings.maxBookingsPerSlot;
+    if (number_of_guests > maxPerSlot) {
+      return NextResponse.json(
+        { error: `Number of guests cannot exceed ${maxPerSlot}.` },
+        { status: 400 }
+      );
+    }
 
     const bookingDateTime = new Date(`${booking_date}T${booking_time}:00`);
     const now = new Date();
@@ -62,46 +72,50 @@ export async function POST(request: Request) {
       );
     }
 
-    const TimeSlot = (await import('@/models/TimeSlot')).default;
+    const raw30 = Array.isArray(settings.timeSlots30Min) && settings.timeSlots30Min.length > 0 ? settings.timeSlots30Min : getDefaultTimeSlots30Min();
+    const raw60 = Array.isArray(settings.timeSlots60Min) && settings.timeSlots60Min.length > 0 ? settings.timeSlots60Min : getDefaultTimeSlots60Min();
+    const slotsForDuration = validSlotDuration === 30 ? raw30.filter((s) => s.enabled) : raw60.filter((s) => s.enabled);
+    const allowedTimes = new Set(slotsForDuration.map((s) => s.value));
+    if (!allowedTimes.has(booking_time)) {
+      return NextResponse.json(
+        { error: 'This time slot is not available for booking.' },
+        { status: 400 }
+      );
+    }
+    const durations = settings.slotDurationsEnabled || { thirtyMinutes: true, sixtyMinutes: true };
+    if (validSlotDuration === 30 && !durations.thirtyMinutes) {
+      return NextResponse.json(
+        { error: '30-minute slot duration is not currently available.' },
+        { status: 400 }
+      );
+    }
+    if (validSlotDuration === 60 && !durations.sixtyMinutes) {
+      return NextResponse.json(
+        { error: '60-minute slot duration is not currently available.' },
+        { status: 400 }
+      );
+    }
+
     const existingBookings = await Booking.find({
       booking_date,
       booking_time,
+      slot_duration: validSlotDuration,
       status: { $in: ['confirmed', 'pending'] },
     });
-    
     const totalGuestsBooked = existingBookings.reduce((sum, booking) => sum + booking.number_of_guests, 0);
 
-    if (totalGuestsBooked + number_of_guests > 24) {
-      const remainingSpots = 24 - totalGuestsBooked;
+    if (totalGuestsBooked + number_of_guests > maxPerSlot) {
+      const remainingSpots = maxPerSlot - totalGuestsBooked;
       if (remainingSpots <= 0) {
         return NextResponse.json(
-          { error: 'This time slot is fully booked. Maximum 24 persons per slot.' },
-          { status: 400 }
-        );
-      } else {
-        return NextResponse.json(
-          { error: `Only ${remainingSpots} spot(s) remaining in this time slot. Please reduce the number of guests.` },
+          { error: `This time slot is fully booked. Maximum ${maxPerSlot} persons per slot.` },
           { status: 400 }
         );
       }
-    }
-
-    let slot = await TimeSlot.findOne({ date: booking_date, time: booking_time });
-    if (!slot) {
-      try {
-        slot = await TimeSlot.create({
-          date: booking_date,
-          time: booking_time,
-          available_spots: 24,
-          booked_spots: 0,
-        });
-      } catch (slotError: any) {
-        if (slotError.code === 11000) {
-          slot = await TimeSlot.findOne({ date: booking_date, time: booking_time });
-        } else {
-          throw slotError;
-        }
-      }
+      return NextResponse.json(
+        { error: `Only ${remainingSpots} spot(s) remaining in this time slot. Please reduce the number of guests.` },
+        { status: 400 }
+      );
     }
 
     const pricePerPerson = getPriceForSlotDuration(validSlotDuration);
@@ -121,13 +135,6 @@ export async function POST(request: Request) {
       amount_paid: 0,
       currency: 'inr',
     });
-
-    if (slot && slot._id) {
-      await TimeSlot.updateOne(
-        { _id: slot._id },
-        { $inc: { booked_spots: number_of_guests } }
-      );
-    }
 
     // Email will be sent after payment verification
     // Don't send email here - payment verification will trigger it
