@@ -38,6 +38,7 @@ export default function BookingsPage() {
   });
   const [changePasswordError, setChangePasswordError] = useState('');
   const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -205,13 +206,40 @@ export default function BookingsPage() {
   return (
     <>
       <style jsx>{`
+        .hamburger {
+          display: none;
+          background: none;
+          border: none;
+          padding: 0.5rem;
+          cursor: pointer;
+          color: #fff;
+          font-size: 1.5rem;
+          line-height: 1;
+          min-width: 44px;
+          min-height: 44px;
+          align-items: center;
+          justify-content: center;
+        }
         @media (max-width: 768px) {
+          .hamburger {
+            display: flex;
+          }
           .bookings-container {
-            padding: 130px 10px 30px !important;
+            padding: 100px 12px 24px !important;
           }
           .bookings-header {
             flex-direction: column;
-            align-items: flex-start !important;
+            align-items: stretch !important;
+            gap: 1rem !important;
+          }
+          .bookings-header-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+          .bookings-header-btns button {
+            width: 100%;
+            min-height: 44px;
           }
           .stats-grid {
             grid-template-columns: repeat(2, 1fr) !important;
@@ -223,25 +251,27 @@ export default function BookingsPage() {
           .filters {
             gap: 0.5rem !important;
           }
+          .filters button {
+            min-height: 44px;
+            flex: 1;
+            min-width: calc(50% - 0.25rem);
+          }
           .bookings-table-container {
             border-radius: 10px !important;
           }
-          .nav-menu {
-            flex-direction: column;
-            gap: 0.75rem !important;
-            padding: 1rem;
-            background: rgba(0, 0, 0, 0.95);
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            display: none;
+          .bookings-table-desktop {
+            display: none !important;
           }
-          .nav-menu.active {
-            display: flex;
+          .bookings-cards-mobile {
+            display: flex !important;
           }
           .logo-image {
             max-height: 50px !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .bookings-cards-mobile {
+            display: none !important;
           }
         }
         @media (max-width: 480px) {
@@ -249,15 +279,47 @@ export default function BookingsPage() {
             grid-template-columns: 1fr !important;
           }
           .filters button {
-            flex: 1;
-            min-width: calc(50% - 0.25rem);
+            min-width: 100%;
           }
+        }
+        .booking-card {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          padding: 1rem;
+          margin-bottom: 1rem;
+        }
+        .booking-card-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+        }
+        .booking-card-label {
+          color: rgba(255,255,255,0.6);
+          flex-shrink: 0;
+        }
+        .booking-card-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+          margin-top: 0.75rem;
+          padding-top: 0.75rem;
+          border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .booking-card-actions button {
+          min-height: 44px;
+          padding: 0.5rem 0.75rem;
+          flex: 1;
+          min-width: 80px;
         }
       `}</style>
       <nav className="navbar">
         <div className="container">
           <div className="logo">
-            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }} onClick={() => setMobileMenuOpen(false)}>
               <Image
                 src="/logo.png"
                 alt="Activerse Logo"
@@ -269,19 +331,22 @@ export default function BookingsPage() {
               />
             </Link>
           </div>
-          <ul className="nav-menu" style={{ display: 'flex', listStyle: 'none', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <li><Link href="/" style={{ color: '#fff', textDecoration: 'none', fontSize: 'clamp(0.85rem, 1.5vw, 1rem)' }}>Back to Home</Link></li>
+          <button type="button" className="hamburger" onClick={() => setMobileMenuOpen((o) => !o)} aria-label="Toggle menu">
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+          <ul className={`nav-menu ${mobileMenuOpen ? 'active' : ''}`} style={{ listStyle: 'none', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <li><Link href="/" style={{ color: '#fff', textDecoration: 'none', fontSize: 'clamp(0.85rem, 1.5vw, 1rem)' }} onClick={() => setMobileMenuOpen(false)}>Back to Home</Link></li>
             <li><span style={{ color: '#4CAF50', fontSize: 'clamp(0.85rem, 1.5vw, 1rem)' }}>Logged in: {user?.username}</span></li>
-            <li><a href="#" onClick={(e) => { e.preventDefault(); setIsChangePasswordModalOpen(true); }} style={{ color: '#fff', textDecoration: 'none', fontSize: 'clamp(0.85rem, 1.5vw, 1rem)', cursor: 'pointer' }}>Change Password</a></li>
-            <li><a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }} style={{ color: '#ec4899', textDecoration: 'none', fontSize: 'clamp(0.85rem, 1.5vw, 1rem)', cursor: 'pointer' }}>Logout</a></li>
+            <li><a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); setIsChangePasswordModalOpen(true); }} style={{ color: '#fff', textDecoration: 'none', fontSize: 'clamp(0.85rem, 1.5vw, 1rem)', cursor: 'pointer' }}>Change Password</a></li>
+            <li><a href="#" onClick={(e) => { e.preventDefault(); setMobileMenuOpen(false); handleLogout(); }} style={{ color: '#ec4899', textDecoration: 'none', fontSize: 'clamp(0.85rem, 1.5vw, 1rem)', cursor: 'pointer' }}>Logout</a></li>
           </ul>
         </div>
       </nav>
 
       <div className="bookings-container" style={{ padding: '150px 20px 50px', maxWidth: '1400px', margin: '0 auto', minHeight: '100vh' }}>
         <div className="bookings-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-          <h1 className="section-title" style={{ margin: 0, fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 700, color: '#fff' }}>Booking Management</h1>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <h1 className="section-title" style={{ margin: 0, fontSize: 'clamp(1.25rem, 4vw, 2.5rem)', fontWeight: 700, color: '#fff' }}>Booking Management</h1>
+          <div className="bookings-header-btns" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setIsSettingsModalOpen(true)}
               className="btn"
@@ -428,6 +493,56 @@ export default function BookingsPage() {
               <p style={{ fontSize: '1.1rem' }}>No bookings found</p>
             </div>
           ) : (
+            <>
+            {/* Mobile card layout */}
+            <div className="bookings-cards-mobile" style={{ flexDirection: 'column', padding: '1rem', display: 'none' }}>
+              {bookings.map((booking) => (
+                <div key={booking._id} className="booking-card">
+                  <div className="booking-card-row">
+                    <span className="booking-card-label">ID</span>
+                    <span style={{ color: 'rgba(255,255,255,0.9)' }}>#{booking._id.slice(-6)}</span>
+                  </div>
+                  <div className="booking-card-row">
+                    <span className="booking-card-label">Name</span>
+                    <span style={{ color: 'rgba(255,255,255,0.9)' }}>{booking.name}</span>
+                  </div>
+                  <div className="booking-card-row">
+                    <span className="booking-card-label">Date / Time</span>
+                    <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem' }}>{new Date(booking.booking_date).toLocaleDateString()} · {booking.booking_time}</span>
+                  </div>
+                  <div className="booking-card-row">
+                    <span className="booking-card-label">Guests</span>
+                    <span style={{ color: 'rgba(255,255,255,0.9)' }}>{booking.number_of_guests}</span>
+                  </div>
+                  <div className="booking-card-row">
+                    <span className="booking-card-label">Status</span>
+                    <span
+                      style={{
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '12px',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        background: booking.status === 'pending' ? 'rgba(255,193,7,0.2)' : booking.status === 'confirmed' ? 'rgba(40,167,69,0.2)' : 'rgba(220,53,69,0.2)',
+                        color: booking.status === 'pending' ? '#ffc107' : booking.status === 'confirmed' ? '#28a745' : '#dc3545',
+                      }}
+                    >
+                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                    </span>
+                  </div>
+                  <div className="booking-card-actions">
+                    {booking.status === 'pending' && (
+                      <button type="button" className="action-btn btn-accept" style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', background: '#17a2b8', color: 'white', fontWeight: 600 }} onClick={() => updateStatus(booking._id, 'confirmed')}>Accept</button>
+                    )}
+                    {booking.status !== 'cancelled' && (
+                      <button type="button" className="action-btn btn-cancel" style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', background: '#dc3545', color: 'white', fontWeight: 600 }} onClick={() => updateStatus(booking._id, 'cancelled')}>Cancel</button>
+                    )}
+                    <button type="button" className="action-btn btn-delete" style={{ padding: '0.5rem 1rem', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', background: '#6c757d', color: 'white', fontWeight: 600 }} onClick={() => deleteBooking(booking._id)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="bookings-table-desktop">
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
               <thead>
                 <tr>
@@ -543,6 +658,8 @@ export default function BookingsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
+            </>
           )}
         </div>
       </div>

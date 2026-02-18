@@ -233,7 +233,7 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '220px', overflow: 'auto' }}>
         {slots.map((slot, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '0.5rem', alignItems: 'center' }}>
+          <div key={i} className="booking-settings-slot-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '0.5rem', alignItems: 'center' }}>
             <input
               type="text"
               placeholder="Value (e.g. 11:00)"
@@ -250,11 +250,13 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
               style={{ padding: '0.4rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.9rem' }}
               aria-label={`${title} slot ${i + 1} label`}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#fff', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={slot.enabled} onChange={(e) => updateFn(duration, i, 'enabled', e.target.checked)} />
-              Enabled
-            </label>
-            <button type="button" onClick={() => setSlots((prev) => prev.filter((_, idx) => idx !== i))} style={{ padding: '0.35rem 0.5rem', background: 'rgba(220, 53, 69, 0.2)', color: '#dc3545', border: '1px solid #dc3545', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Remove</button>
+            <div className="slot-enabled-remove" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: '#fff', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={slot.enabled} onChange={(e) => updateFn(duration, i, 'enabled', e.target.checked)} style={{ minWidth: '18px', minHeight: '18px' }} />
+                Enabled
+              </label>
+              <button type="button" onClick={() => setSlots((prev) => prev.filter((_, idx) => idx !== i))} style={{ padding: '0.35rem 0.5rem', background: 'rgba(220, 53, 69, 0.2)', color: '#dc3545', border: '1px solid #dc3545', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Remove</button>
+            </div>
           </div>
         ))}
       </div>
@@ -262,25 +264,112 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
   );
 
   return (
-    <div className="modal show" onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-      <div className="modal-content" style={{ background: '#1a1a2e', borderRadius: '12px', padding: '2rem', maxWidth: '640px', width: '95%', maxHeight: '90vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
-        <span className="close-modal" onClick={onClose} style={{ cursor: 'pointer', float: 'right', fontSize: '1.5rem', color: '#fff' }}>&times;</span>
-        <h2 style={{ marginTop: 0, color: '#fff' }}>Booking Settings</h2>
-        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '1rem' }}>
+    <div
+      className="booking-settings-modal-overlay"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: 'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)',
+      }}
+    >
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .booking-settings-modal-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            height: 100%;
+            border-radius: 0 !important;
+            padding: 1rem !important;
+            padding-top: max(1rem, env(safe-area-inset-top)) !important;
+          }
+          .booking-settings-modal-close {
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+          }
+          .booking-settings-modal-tabs {
+            flex-direction: column;
+          }
+          .booking-settings-modal-tabs button {
+            width: 100%;
+            min-height: 44px;
+          }
+          .booking-settings-slot-row {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .booking-settings-slot-row .slot-enabled-remove {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .booking-settings-calendar-btns {
+            flex-direction: column;
+          }
+          .booking-settings-calendar-btns button {
+            width: 100%;
+            min-height: 44px;
+          }
+          .booking-settings-form-actions {
+            flex-direction: column;
+          }
+          .booking-settings-form-actions button {
+            width: 100%;
+            min-height: 44px;
+          }
+        }
+      `}</style>
+      <div
+        className="booking-settings-modal-content"
+        style={{
+          background: '#1a1a2e',
+          borderRadius: '12px',
+          padding: '2rem',
+          maxWidth: '640px',
+          width: '95%',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          position: 'relative',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="booking-settings-modal-close"
+          onClick={onClose}
+          aria-label="Close"
+          style={{ cursor: 'pointer', position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', padding: '0.25rem', lineHeight: 1 }}
+        >
+          &times;
+        </button>
+        <h2 style={{ marginTop: 0, marginRight: '2rem', color: '#fff', fontSize: 'clamp(1.25rem, 4vw, 1.5rem)' }}>Booking Settings</h2>
+        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(0.85rem, 2vw, 0.9rem)', marginBottom: '1rem' }}>
           Default (all days): edit time slots and max per slot. Calendar: for a specific date, only close certain times; each new day has all slots open by default.
         </p>
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+        <div className="booking-settings-modal-tabs" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => setTab('default')}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.6rem 1rem',
+              minHeight: '44px',
               background: tab === 'default' ? '#4CAF50' : 'rgba(255,255,255,0.1)',
               color: '#fff',
               border: `1px solid ${tab === 'default' ? '#4CAF50' : 'rgba(255,255,255,0.3)'}`,
               borderRadius: '8px',
               cursor: 'pointer',
               fontWeight: 600,
+              fontSize: 'clamp(0.85rem, 2vw, 1rem)',
             }}
           >
             Default (all days)
@@ -289,13 +378,15 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
             type="button"
             onClick={() => setTab('calendar')}
             style={{
-              padding: '0.5rem 1rem',
+              padding: '0.6rem 1rem',
+              minHeight: '44px',
               background: tab === 'calendar' ? '#4CAF50' : 'rgba(255,255,255,0.1)',
               color: '#fff',
               border: `1px solid ${tab === 'calendar' ? '#4CAF50' : 'rgba(255,255,255,0.3)'}`,
               borderRadius: '8px',
               cursor: 'pointer',
               fontWeight: 600,
+              fontSize: 'clamp(0.85rem, 2vw, 1rem)',
             }}
           >
             Calendar (per day)
@@ -311,11 +402,11 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
                 value={calendarDate}
                 onChange={(e) => setCalendarDate(e.target.value)}
                 aria-label="Select date for per-day settings"
-                style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff', marginRight: '0.5rem' }}
+                style={{ padding: '0.6rem', minHeight: '44px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff' }}
               />
               {calendarOverrides.length > 0 && (
-                <small style={{ color: 'rgba(255,255,255,0.6)', display: 'block', marginTop: '0.5rem' }}>
-                  Days with custom settings: {calendarOverrides.join(', ')}
+                <small style={{ color: 'rgba(255,255,255,0.6)', display: 'block', marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                  Days with closed slots: {calendarOverrides.slice(0, 3).join(', ')}{calendarOverrides.length > 3 ? ` +${calendarOverrides.length - 3}` : ''}
                 </small>
               )}
             </div>
@@ -325,47 +416,37 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
                   <p style={{ color: '#fff' }}>Loading...</p>
                 ) : (
                   <>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                      Check a time to close it for this day. Uncheck to open. Save to apply. Reset opens all slots for this day.
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 'clamp(0.85rem, 2vw, 0.9rem)', marginBottom: '1rem' }}>
+                      Check a time to close it for this day. Uncheck to open.
                     </p>
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>30-minute slots — close for this day</label>
+                      <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>30-min slots — close for this day</label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflow: 'auto' }}>
                         {getDefaultTimeSlots30Min().map((slot) => (
-                          <label key={slot.value} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff', fontSize: '0.9rem' }}>
-                            <input
-                              type="checkbox"
-                              checked={closedTimeSlots.includes(slot.value)}
-                              onChange={(e) => toggleClosedSlot(slot.value, e.target.checked)}
-                              aria-label={`Close ${slot.label} for this day`}
-                            />
+                          <label key={slot.value} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff', fontSize: '0.9rem', minHeight: '44px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={closedTimeSlots.includes(slot.value)} onChange={(e) => toggleClosedSlot(slot.value, e.target.checked)} aria-label={`Close ${slot.label}`} style={{ minWidth: '20px', minHeight: '20px' }} />
                             <span>{slot.label}</span>
                           </label>
                         ))}
                       </div>
                     </div>
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>60-minute slots — close for this day</label>
+                      <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>60-min slots — close for this day</label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflow: 'auto' }}>
                         {getDefaultTimeSlots60Min().map((slot) => (
-                          <label key={slot.value} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff', fontSize: '0.9rem' }}>
-                            <input
-                              type="checkbox"
-                              checked={closedTimeSlots.includes(slot.value)}
-                              onChange={(e) => toggleClosedSlot(slot.value, e.target.checked)}
-                              aria-label={`Close ${slot.label} for this day`}
-                            />
+                          <label key={slot.value} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff', fontSize: '0.9rem', minHeight: '44px', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={closedTimeSlots.includes(slot.value)} onChange={(e) => toggleClosedSlot(slot.value, e.target.checked)} aria-label={`Close ${slot.label}`} style={{ minWidth: '20px', minHeight: '20px' }} />
                             <span>{slot.label}</span>
                           </label>
                         ))}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                      <button type="button" onClick={saveCalendarDay} disabled={calendarSaving} style={{ padding: '0.6rem 1.2rem', background: calendarSaving ? '#666' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '8px', cursor: calendarSaving ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
-                        {calendarSaving ? 'Saving...' : `Save closed slots for ${calendarDate}`}
+                    <div className="booking-settings-calendar-btns" style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                      <button type="button" onClick={saveCalendarDay} disabled={calendarSaving} style={{ padding: '0.6rem 1.2rem', minHeight: '44px', background: calendarSaving ? '#666' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '8px', cursor: calendarSaving ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
+                        {calendarSaving ? 'Saving...' : `Save for ${calendarDate}`}
                       </button>
-                      <button type="button" onClick={resetCalendarDay} disabled={calendarSaving} style={{ padding: '0.6rem 1.2rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '8px', cursor: calendarSaving ? 'not-allowed' : 'pointer' }}>
-                        Open all slots for this day
+                      <button type="button" onClick={resetCalendarDay} disabled={calendarSaving} style={{ padding: '0.6rem 1.2rem', minHeight: '44px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '8px', cursor: calendarSaving ? 'not-allowed' : 'pointer' }}>
+                        Open all slots
                       </button>
                     </div>
                   </>
@@ -390,7 +471,7 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
                 max={500}
                 value={maxBookingsPerSlot}
                 onChange={(e) => setMaxBookingsPerSlot(Math.max(1, Math.min(500, parseInt(e.target.value) || 24)))}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff' }}
+                style={{ width: '100%', padding: '0.6rem', minHeight: '44px', boxSizing: 'border-box', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', color: '#fff' }}
                 aria-label="Maximum bookings per time slot"
               />
               <small style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>Maximum number of guests per (date, time, duration) slot (e.g. 24).</small>
@@ -401,12 +482,12 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
 
             <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
               <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Slot duration options</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)', marginBottom: '0.5rem' }}>
-                <input type="checkbox" checked={slotDurationsEnabled.thirtyMinutes} onChange={(e) => setSlotDurationsEnabled((p) => ({ ...p, thirtyMinutes: e.target.checked }))} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)', marginBottom: '0.5rem', minHeight: '44px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={slotDurationsEnabled.thirtyMinutes} onChange={(e) => setSlotDurationsEnabled((p) => ({ ...p, thirtyMinutes: e.target.checked }))} style={{ minWidth: '20px', minHeight: '20px' }} />
                 30 minutes slot
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)' }}>
-                <input type="checkbox" checked={slotDurationsEnabled.sixtyMinutes} onChange={(e) => setSlotDurationsEnabled((p) => ({ ...p, sixtyMinutes: e.target.checked }))} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)', minHeight: '44px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={slotDurationsEnabled.sixtyMinutes} onChange={(e) => setSlotDurationsEnabled((p) => ({ ...p, sixtyMinutes: e.target.checked }))} style={{ minWidth: '20px', minHeight: '20px' }} />
                 60 minutes (1 hour) slot
               </label>
               <small style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>Disabling both will hide duration choice; at least one is recommended.</small>
@@ -414,9 +495,9 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
 
             {error && <div style={{ color: '#f44336', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
             {success && <div style={{ color: '#4CAF50', marginBottom: '1rem', fontSize: '0.9rem' }}>{success}</div>}
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={onClose} style={{ padding: '0.6rem 1.2rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
-              <button type="submit" disabled={saving} style={{ padding: '0.6rem 1.2rem', background: saving ? '#666' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '8px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600 }}>{saving ? 'Saving...' : 'Save settings'}</button>
+            <div className="booking-settings-form-actions" style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button type="button" onClick={onClose} style={{ padding: '0.6rem 1.2rem', minHeight: '44px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', cursor: 'pointer' }}>Cancel</button>
+              <button type="submit" disabled={saving} style={{ padding: '0.6rem 1.2rem', minHeight: '44px', background: saving ? '#666' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '8px', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 600 }}>{saving ? 'Saving...' : 'Save settings'}</button>
             </div>
           </form>
         )}
