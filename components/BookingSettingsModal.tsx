@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getDefaultTimeSlots30Min, getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
+import { getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
 
 interface TimeSlotOption {
   value: string;
@@ -19,10 +19,9 @@ type Tab = 'default' | 'calendar';
 
 export default function BookingSettingsModal({ isOpen, onClose, onSaved }: BookingSettingsModalProps) {
   const [tab, setTab] = useState<Tab>('default');
-  const [timeSlots30Min, setTimeSlots30Min] = useState<TimeSlotOption[]>([]);
   const [timeSlots60Min, setTimeSlots60Min] = useState<TimeSlotOption[]>([]);
   const [maxBookingsPerSlot, setMaxBookingsPerSlot] = useState(24);
-  const [slotDurationsEnabled, setSlotDurationsEnabled] = useState({ thirtyMinutes: true, sixtyMinutes: true });
+  const [slotDurationsEnabled, setSlotDurationsEnabled] = useState({ sixtyMinutes: true });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -49,11 +48,6 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
             setError(data.error);
             return;
           }
-          if (Array.isArray(data.timeSlots30Min) && data.timeSlots30Min.length > 0) {
-            setTimeSlots30Min(data.timeSlots30Min);
-          } else {
-            setTimeSlots30Min(getDefaultTimeSlots30Min());
-          }
           if (Array.isArray(data.timeSlots60Min) && data.timeSlots60Min.length > 0) {
             setTimeSlots60Min(data.timeSlots60Min);
           } else {
@@ -64,7 +58,6 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
           }
           if (data.slotDurationsEnabled && typeof data.slotDurationsEnabled === 'object') {
             setSlotDurationsEnabled({
-              thirtyMinutes: typeof data.slotDurationsEnabled.thirtyMinutes === 'boolean' ? data.slotDurationsEnabled.thirtyMinutes : true,
               sixtyMinutes: typeof data.slotDurationsEnabled.sixtyMinutes === 'boolean' ? data.slotDurationsEnabled.sixtyMinutes : true,
             });
           }
@@ -147,38 +140,24 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
     }
   };
 
-  const updateSlot = (duration: 30 | 60, index: number, field: keyof TimeSlotOption, value: string | boolean) => {
-    if (duration === 30) {
-      setTimeSlots30Min((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], [field]: value };
-        return next;
-      });
-    } else {
-      setTimeSlots60Min((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], [field]: value };
-        return next;
-      });
-    }
+  const updateSlot = (duration: 60, index: number, field: keyof TimeSlotOption, value: string | boolean) => {
+    setTimeSlots60Min((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
   };
 
-  const addSlot = (duration: 30 | 60) => {
-    if (duration === 30) {
-      setTimeSlots30Min((prev) => [...prev, { value: '11:00', label: '11:00 AM', enabled: true }]);
-    } else {
-      setTimeSlots60Min((prev) => [...prev, { value: '11:00', label: '11 AM-12 PM', enabled: true }]);
-    }
+  const addSlot = (duration: 60) => {
+    setTimeSlots60Min((prev) => [...prev, { value: '11:00', label: '11 AM-12 PM', enabled: true }]);
   };
 
-  const removeSlot = (duration: 30 | 60, index: number) => {
-    if (duration === 30) setTimeSlots30Min((prev) => prev.filter((_, i) => i !== index));
-    else setTimeSlots60Min((prev) => prev.filter((_, i) => i !== index));
+  const removeSlot = (duration: 60, index: number) => {
+    setTimeSlots60Min((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const resetToDefault = (duration: 30 | 60) => {
-    if (duration === 30) setTimeSlots30Min(getDefaultTimeSlots30Min());
-    else setTimeSlots60Min(getDefaultTimeSlots60Min());
+  const resetToDefault = (duration: 60) => {
+    setTimeSlots60Min(getDefaultTimeSlots60Min());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,7 +171,6 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          timeSlots30Min,
           timeSlots60Min,
           maxBookingsPerSlot,
           slotDurationsEnabled,
@@ -217,18 +195,18 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
   if (!isOpen) return null;
 
   const renderSlotList = (
-    duration: 30 | 60,
+    duration: 60,
     slots: TimeSlotOption[],
     title: string,
-    updateFn: (d: 30 | 60, i: number, field: keyof TimeSlotOption, value: string | boolean) => void,
+    updateFn: (d: 60, i: number, field: keyof TimeSlotOption, value: string | boolean) => void,
     setSlots: React.Dispatch<React.SetStateAction<TimeSlotOption[]>>
   ) => (
     <div style={{ marginBottom: '1.5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <label style={{ color: '#fff', fontWeight: 600 }}>{title}</label>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button type="button" onClick={() => setSlots(duration === 30 ? getDefaultTimeSlots30Min() : getDefaultTimeSlots60Min())} style={{ padding: '0.35rem 0.75rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Reset 11 AM–11 PM</button>
-          <button type="button" onClick={() => setSlots((prev) => [...prev, { value: '11:00', label: duration === 30 ? '11:00 AM' : '11 AM-12 PM', enabled: true }])} style={{ padding: '0.35rem 0.75rem', background: 'rgba(76, 175, 80, 0.3)', color: '#4CAF50', border: '1px solid #4CAF50', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Add slot</button>
+          <button type="button" onClick={() => setSlots(getDefaultTimeSlots60Min())} style={{ padding: '0.35rem 0.75rem', background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Reset 11 AM–11 PM</button>
+          <button type="button" onClick={() => setSlots((prev) => [...prev, { value: '11:00', label: '11 AM-12 PM', enabled: true }])} style={{ padding: '0.35rem 0.75rem', background: 'rgba(76, 175, 80, 0.3)', color: '#4CAF50', border: '1px solid #4CAF50', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>Add slot</button>
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '220px', overflow: 'auto' }}>
@@ -420,18 +398,7 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
                       Check a time to close it for this day. Uncheck to open.
                     </p>
                     <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>30-min slots — close for this day</label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflow: 'auto' }}>
-                        {getDefaultTimeSlots30Min().map((slot) => (
-                          <label key={slot.value} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff', fontSize: '0.9rem', minHeight: '44px', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={closedTimeSlots.includes(slot.value)} onChange={(e) => toggleClosedSlot(slot.value, e.target.checked)} aria-label={`Close ${slot.label}`} style={{ minWidth: '20px', minHeight: '20px' }} />
-                            <span>{slot.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>60-min slots — close for this day</label>
+                      <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Slots — close for this day</label>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflow: 'auto' }}>
                         {getDefaultTimeSlots60Min().map((slot) => (
                           <label key={slot.value} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#fff', fontSize: '0.9rem', minHeight: '44px', cursor: 'pointer' }}>
@@ -477,20 +444,14 @@ export default function BookingSettingsModal({ isOpen, onClose, onSaved }: Booki
               <small style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>Maximum number of guests per (date, time, duration) slot (e.g. 24).</small>
             </div>
 
-            {renderSlotList(30, timeSlots30Min, '30-minute time slots', updateSlot, setTimeSlots30Min)}
-            {renderSlotList(60, timeSlots60Min, '60-minute (1 hour) time slots', updateSlot, setTimeSlots60Min)}
+            {renderSlotList(60, timeSlots60Min, 'Time slots (1 hour)', updateSlot, setTimeSlots60Min)}
 
             <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
               <label style={{ color: '#fff', fontWeight: 600, marginBottom: '0.5rem', display: 'block' }}>Slot duration options</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)', marginBottom: '0.5rem', minHeight: '44px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={slotDurationsEnabled.thirtyMinutes} onChange={(e) => setSlotDurationsEnabled((p) => ({ ...p, thirtyMinutes: e.target.checked }))} style={{ minWidth: '20px', minHeight: '20px' }} />
-                30 minutes slot
-              </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.9)', minHeight: '44px', cursor: 'pointer' }}>
                 <input type="checkbox" checked={slotDurationsEnabled.sixtyMinutes} onChange={(e) => setSlotDurationsEnabled((p) => ({ ...p, sixtyMinutes: e.target.checked }))} style={{ minWidth: '20px', minHeight: '20px' }} />
                 60 minutes (1 hour) slot
               </label>
-              <small style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', display: 'block', marginTop: '0.5rem' }}>Disabling both will hide duration choice; at least one is recommended.</small>
             </div>
 
             {error && <div style={{ color: '#f44336', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}

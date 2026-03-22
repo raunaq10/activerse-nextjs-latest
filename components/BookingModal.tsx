@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getDefaultTimeSlots30Min, getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
+import { getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
 
 declare global {
   interface Window {
@@ -33,18 +33,17 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
     phone: '',
     booking_date: '',
     booking_time: '',
-    slot_duration: 60 as 30 | 60, // Default to 1 hour
+    slot_duration: 60 as 60, // Fixed to 1 hour
     number_of_guests: '' as number | '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [timeSlots30Min, setTimeSlots30Min] = useState<TimeSlotOption[]>([]);
   const [timeSlots60Min, setTimeSlots60Min] = useState<TimeSlotOption[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlotOption[]>([]);
   const [slotAvailability, setSlotAvailability] = useState<Record<string, SlotAvailability>>({});
-  const [slotDurationsEnabled, setSlotDurationsEnabled] = useState({ thirtyMinutes: true, sixtyMinutes: true });
+  const [slotDurationsEnabled, setSlotDurationsEnabled] = useState({ sixtyMinutes: true });
   const [maxGuestsPerSlot, setMaxGuestsPerSlot] = useState(24);
 
   // Slot-based pricing from environment variables (client-side accessible)
@@ -53,11 +52,21 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
     60: Number(process.env.NEXT_PUBLIC_SLOT_2_PRICE) || 1500, // 1 hour slot
   } as const;
 
-  const pricePerPerson = SLOT_PRICES[formData.slot_duration];
+  const getPricePerPerson = (duration: 30 | 60, guests: number) => {
+    if (duration === 60) {
+      if (guests >= 10) return 1199;
+      if (guests >= 6) return 1299;
+      if (guests >= 4) return 1399;
+      return 1499;
+    }
+    return SLOT_PRICES[duration] || 1500;
+  };
+
   const guestsCount = typeof formData.number_of_guests === 'number' ? formData.number_of_guests : 0;
+  const pricePerPerson = getPricePerPerson(formData.slot_duration, Math.max(1, guestsCount));
   const totalAmount = pricePerPerson * guestsCount;
 
-  const fetchAvailability = useCallback(async (date: string, duration: 30 | 60) => {
+  const fetchAvailability = useCallback(async (date: string, duration: 60) => {
     if (!date) {
       setSlotAvailability({});
       return;
@@ -84,11 +93,9 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
       fetch('/api/booking-settings/public')
         .then((res) => res.ok ? res.json() : null)
         .then((data) => {
-          setTimeSlots30Min(Array.isArray(data?.timeSlots30Min) && data.timeSlots30Min.length > 0 ? data.timeSlots30Min : getDefaultTimeSlots30Min());
           setTimeSlots60Min(Array.isArray(data?.timeSlots60Min) && data.timeSlots60Min.length > 0 ? data.timeSlots60Min : getDefaultTimeSlots60Min());
           if (data?.slotDurationsEnabled && typeof data.slotDurationsEnabled === 'object') {
             setSlotDurationsEnabled({
-              thirtyMinutes: typeof data.slotDurationsEnabled.thirtyMinutes === 'boolean' ? data.slotDurationsEnabled.thirtyMinutes : true,
               sixtyMinutes: typeof data.slotDurationsEnabled.sixtyMinutes === 'boolean' ? data.slotDurationsEnabled.sixtyMinutes : true,
             });
           }
@@ -97,7 +104,6 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
           }
         })
         .catch(() => {
-          setTimeSlots30Min(getDefaultTimeSlots30Min());
           setTimeSlots60Min(getDefaultTimeSlots60Min());
         });
 
@@ -125,19 +131,8 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
   }, [formData.booking_date, formData.slot_duration, fetchAvailability]);
 
   useEffect(() => {
-    const list = formData.slot_duration === 30 ? timeSlots30Min : timeSlots60Min;
-    if (list.length) setTimeSlots(list);
-  }, [formData.slot_duration, timeSlots30Min, timeSlots60Min]);
-
-  useEffect(() => {
-    const valid30 = slotDurationsEnabled.thirtyMinutes;
-    const valid60 = slotDurationsEnabled.sixtyMinutes;
-    if (formData.slot_duration === 30 && !valid30 && valid60) {
-      setFormData((prev) => ({ ...prev, slot_duration: 60, booking_time: '' }));
-    } else if (formData.slot_duration === 60 && !valid60 && valid30) {
-      setFormData((prev) => ({ ...prev, slot_duration: 30, booking_time: '' }));
-    }
-  }, [slotDurationsEnabled, formData.slot_duration]);
+    if (timeSlots60Min.length) setTimeSlots(timeSlots60Min);
+  }, [timeSlots60Min]);
 
   const handlePayment = async (bookingId: string, amount: number) => {
     try {
@@ -326,6 +321,13 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
     <div className="modal show" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-content">
         <span className="close-modal" onClick={onClose}>&times;</span>
+        <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+          <img 
+            src="/deteils.jpeg" 
+            alt="Booking Details" 
+            style={{ width: '100%', height: 'auto', borderRadius: '8px', objectFit: 'contain' }} 
+          />
+        </div>
         <h2>Book Your Experience</h2>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -366,28 +368,18 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="slot-duration">Slot Duration *</label>
-              <select
-                id="slot-duration"
-                name="slot_duration"
-                required
-                value={formData.slot_duration}
-                onChange={(e) => setFormData({ ...formData, slot_duration: parseInt(e.target.value) as 30 | 60, booking_time: '' })}
-                className="w-full"
+              <label>Slot Duration *</label>
+              <div 
+                style={{
+                  padding: '0.6rem 0.75rem',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: '#fff',
+                }}
               >
-                {slotDurationsEnabled.thirtyMinutes && (
-                  <option value="30">30 Minutes - ₹{SLOT_PRICES[30].toLocaleString('en-IN')} per person</option>
-                )}
-                {slotDurationsEnabled.sixtyMinutes && (
-                  <option value="60">1 Hour - ₹{SLOT_PRICES[60].toLocaleString('en-IN')} per person</option>
-                )}
-                {!slotDurationsEnabled.thirtyMinutes && !slotDurationsEnabled.sixtyMinutes && (
-                  <>
-                    <option value="30">30 Minutes - ₹{SLOT_PRICES[30].toLocaleString('en-IN')} per person</option>
-                    <option value="60">1 Hour - ₹{SLOT_PRICES[60].toLocaleString('en-IN')} per person</option>
-                  </>
-                )}
-              </select>
+                1 Hour - Group packages available
+              </div>
             </div>
             <div className="form-group">
               <label htmlFor="booking-date">Date *</label>
@@ -402,6 +394,15 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 className="w-full"
               />
             </div>
+          </div>
+          <div style={{ background: 'rgba(236, 72, 153, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(236, 72, 153, 0.3)', marginBottom: '1rem' }}>
+            <p style={{ margin: '0 0 0.5rem 0', fontWeight: 'bold', color: '#ec4899', fontSize: '0.9rem' }}>Price List (Per Person / 1 Hour)</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
+                <div>👥 Group of 1–3: ₹1499</div>
+                <div>👥 Group of 4–5: ₹1399</div>
+                <div>👥 Group of 6–9: ₹1299</div>
+                <div>👥 Group of 10+: ₹1199</div>
+              </div>
           </div>
           <div className="form-row">
             <div className="form-group" style={{ flex: 1 }}>
@@ -474,7 +475,7 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                           color: isFull ? 'rgba(255,255,255,0.6)' : '#fff',
                         }}
                       >
-                        <span>{slot.label}{isFull ? ' (Full)' : ''}</span>
+                        <span>{slot.label}{isFull ? <span style={{ color: '#ef4444', fontWeight: 'bold' }}> 🔴 Slot full</span> : ''}</span>
                         {!isFull && avail && (
                           <span className="text-white/60 text-sm block mt-0.5">
                             {avail.max - avail.booked} spots left
@@ -486,7 +487,7 @@ export default function BookingModal({ isOpen, onClose }: BookingModalProps) {
                 </div>
               )}
               {formData.booking_time && slotAvailability[formData.booking_time]?.isFull && (
-                <small className="text-white/70 text-sm mt-1 block">This slot is full, choose different</small>
+                <small className="text-sm mt-1 block" style={{ color: '#ef4444', fontWeight: 'bold' }}>This slot is sold out, choose different</small>
               )}
             </div>
             <div className="form-group">

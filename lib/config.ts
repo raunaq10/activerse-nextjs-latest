@@ -13,8 +13,14 @@ export const SLOT_PRICES = {
 // Legacy support: PRICE_PER_PERSON defaults to 1 hour price
 export const PRICE_PER_PERSON = Number(process.env.PRICE_PER_PERSON) || SLOT_PRICES[60];
 
-// Helper function to get price based on slot duration
-export function getPriceForSlotDuration(duration: 30 | 60): number {
+// Helper function to get price based on slot duration and number of guests
+export function getPriceForSlotDuration(duration: 30 | 60, guests: number = 1): number {
+  if (duration === 60) {
+    if (guests >= 10) return 1199;
+    if (guests >= 6) return 1299;
+    if (guests >= 4) return 1399;
+    return 1499;
+  }
   return SLOT_PRICES[duration] || SLOT_PRICES[60];
 }
 

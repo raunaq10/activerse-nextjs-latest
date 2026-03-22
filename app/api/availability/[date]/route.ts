@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Booking from '@/models/Booking';
 import { getSettingsForDate } from '@/lib/getBookingSettings';
-import { getDefaultTimeSlots30Min, getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
+import { getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,13 +19,10 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const duration = searchParams.get('duration');
-    const slotDuration = duration === '30' ? 30 : duration === '60' ? 60 : 60;
+    const slotDuration = 60;
 
     const settings = await getSettingsForDate(date);
-    const enabledSlots = slotDuration === 30
-      ? (Array.isArray(settings.timeSlots30Min) && settings.timeSlots30Min.length > 0 ? settings.timeSlots30Min : getDefaultTimeSlots30Min()).filter((x) => x.enabled)
-      : (Array.isArray(settings.timeSlots60Min) && settings.timeSlots60Min.length > 0 ? settings.timeSlots60Min : getDefaultTimeSlots60Min()).filter((x) => x.enabled);
+    const enabledSlots = (Array.isArray(settings.timeSlots60Min) && settings.timeSlots60Min.length > 0 ? settings.timeSlots60Min : getDefaultTimeSlots60Min()).filter((x) => x.enabled);
     const maxPerSlot = settings.maxBookingsPerSlot;
 
     // For each date we only count bookings for that date — so a new day always has 0 booked (default full availability)

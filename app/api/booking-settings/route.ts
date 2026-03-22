@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/session';
 import BookingSettings from '@/models/BookingSettings';
 import { getOrCreateBookingSettings } from '@/lib/getBookingSettings';
-import { getDefaultTimeSlots30Min, getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
+import { getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,15 +43,11 @@ export async function PUT(request: Request) {
   try {
     await requireAuth();
     const body = await request.json();
-    const { timeSlots30Min, timeSlots60Min, maxBookingsPerSlot, slotDurationsEnabled } = body;
+    const { timeSlots60Min, maxBookingsPerSlot, slotDurationsEnabled } = body;
 
     const settings = await getOrCreateBookingSettings();
 
-    if (Array.isArray(timeSlots30Min)) {
-      const sanitized = sanitizeSlotList(timeSlots30Min);
-      settings.timeSlots30Min = sanitized.length ? sanitized : getDefaultTimeSlots30Min();
-      settings.markModified('timeSlots30Min');
-    }
+
     if (Array.isArray(timeSlots60Min)) {
       const sanitized = sanitizeSlotList(timeSlots60Min);
       settings.timeSlots60Min = sanitized.length ? sanitized : getDefaultTimeSlots60Min();
@@ -61,9 +57,9 @@ export async function PUT(request: Request) {
       settings.maxBookingsPerSlot = Math.round(maxBookingsPerSlot);
     }
     if (slotDurationsEnabled && typeof slotDurationsEnabled === 'object') {
-      settings.slotDurationsEnabled = settings.slotDurationsEnabled || { thirtyMinutes: true, sixtyMinutes: true };
-      settings.slotDurationsEnabled.thirtyMinutes = typeof slotDurationsEnabled.thirtyMinutes === 'boolean' ? slotDurationsEnabled.thirtyMinutes : true;
-      settings.slotDurationsEnabled.sixtyMinutes = typeof slotDurationsEnabled.sixtyMinutes === 'boolean' ? slotDurationsEnabled.sixtyMinutes : true;
+      settings.slotDurationsEnabled = {
+        sixtyMinutes: typeof slotDurationsEnabled.sixtyMinutes === 'boolean' ? slotDurationsEnabled.sixtyMinutes : true,
+      };
       settings.markModified('slotDurationsEnabled');
     }
 

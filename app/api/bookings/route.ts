@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/session';
 import connectDB from '@/lib/mongodb';
 import Booking from '@/models/Booking';
 import { getPriceForSlotDuration } from '@/lib/config';
-import { getDefaultTimeSlots30Min, getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
+import { getDefaultTimeSlots60Min } from '@/lib/timeSlotDefaults';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,8 +42,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, email, phone, booking_date, booking_time, slot_duration, number_of_guests, special_requests } = body;
 
-    // Validate slot_duration (default to 60 if not provided for backward compatibility)
-    const validSlotDuration = slot_duration === 30 || slot_duration === 60 ? slot_duration : 60;
+    const validSlotDuration = 60;
 
     if (!name || !email || !phone || !booking_date || !booking_time || !number_of_guests || number_of_guests < 1) {
       return NextResponse.json(
@@ -72,9 +71,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const raw30 = Array.isArray(settings.timeSlots30Min) && settings.timeSlots30Min.length > 0 ? settings.timeSlots30Min : getDefaultTimeSlots30Min();
     const raw60 = Array.isArray(settings.timeSlots60Min) && settings.timeSlots60Min.length > 0 ? settings.timeSlots60Min : getDefaultTimeSlots60Min();
-    const slotsForDuration = validSlotDuration === 30 ? raw30.filter((s) => s.enabled) : raw60.filter((s) => s.enabled);
+    const slotsForDuration = raw60.filter((s) => s.enabled);
     const allowedTimes = new Set(slotsForDuration.map((s) => s.value));
     if (!allowedTimes.has(booking_time)) {
       return NextResponse.json(
@@ -82,14 +80,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const durations = settings.slotDurationsEnabled || { thirtyMinutes: true, sixtyMinutes: true };
-    if (validSlotDuration === 30 && !durations.thirtyMinutes) {
-      return NextResponse.json(
-        { error: '30-minute slot duration is not currently available.' },
-        { status: 400 }
-      );
-    }
-    if (validSlotDuration === 60 && !durations.sixtyMinutes) {
+    const durations = settings.slotDurationsEnabled || { sixtyMinutes: true };
+    if (!durations.sixtyMinutes) {
       return NextResponse.json(
         { error: '60-minute slot duration is not currently available.' },
         { status: 400 }
@@ -118,7 +110,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const pricePerPerson = getPriceForSlotDuration(validSlotDuration);
+    const pricePerPerson = getPriceForSlotDuration(validSlotDuration, number_of_guests);
     const totalAmount = pricePerPerson * number_of_guests;
 
     const booking = await Booking.create({
